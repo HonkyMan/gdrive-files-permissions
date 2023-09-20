@@ -1,0 +1,20 @@
+{
+    "users": [
+        {"email": "example@gmail.com", "name": "Kam", "status": "New", "role": "reader", "is_deleted": false, "comment": ""}
+    ],
+    "courses": [
+        {"category": "1. BIT 4 - 6", "sub_category": "", "course_name": "BIT 1 lvl"},
+
+        {"category": "2. Byte 6 - 7", "sub_category": "", "course_name": "Scratch Jr"},
+
+        {"category": "3. KByte 8 - 10", "sub_category": "", "course_name": "Scratch Base"},
+
+        {"category": "4. MByte 10-12", "sub_category": "", "course_name": "Digital literacy"},
+
+        {"category": "5. GByte 12+", "sub_category": "", "course_name": "Construct 3"},
+
+        {"category": "6. TByte 14+", "sub_category": "TByte 14+ Web", "course_name": "Figma Pro"},
+        {"category": "6. TByte 14+", "sub_category": "TByte 14+ GameDev", "course_name": "C# Base"},
+        {"category": "6. TByte 14+", "sub_category": "TByte 14+ Bots and AI", "course_name": "Bots"}
+    ]
+}

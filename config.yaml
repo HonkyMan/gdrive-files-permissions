@@ -1,0 +1,25 @@
+DATABASE_NAME: access_management.db
+DATABASE_MOCK_DATA: source/db_data.json
+GDRIVE_API_KEYS: proginpresentationcreds-bb9c987e5d75.json
+GDRIVE_SERVICE_NAME: drive
+GDRIVE_VERSION: v3
+GDRIVE_MIME_TYPES:
+  folder: (mimeType='application/vnd.google-apps.folder')
+  presentation: (mimeType='application/vnd.openxmlformats-officedocument.presentationml.presentation' or mimeType='application/vnd.google-apps.presentation')
+  docs: mimeType='application/vnd.google-apps.document' or mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document' or mimeType='application/vnd.ms-word'
+  sheet: mimeType='application/vnd.google-apps.spreadsheet' or mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or mimeType='application/vnd.ms-excel'
+  image: mimeType='image/png' or mimeType='image/jpeg' or mimeType='image/webp'
+  unknown: mimeType='application/vnd.google-apps.unknown'
+  other: mimeType='application/zip' or mimeType='application/pdf' or mimeType='application/x-rar-compressed' or mimeType='audio/mpeg' or mimeType='video/mp4' or mimeType='text/css' or mimeType='text/html' or mimeType='text/javascript' or mimeType='text/x-php' or mimeType='application/x-sqlite3' or mimeType='text/x-c++src' or mimeType='text/x-csharp' or mimeType='text/x-python' or mimeType='text/csv'
+
+GDRIVE_COPY_PERMISSIONS:
+  copyRequiresWriterPermission: True
+GDRIVE_ROLES:
+- owner
+- organizer
+- fileOrganizer
+- writer
+- commenter
+- reader
+SCOPES: 
+- https://www.googleapis.com/auth/drive
