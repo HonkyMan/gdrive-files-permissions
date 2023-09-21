@@ -10,6 +10,9 @@ CONFIG_PATH = 'source/config.yaml'
 
 class GoogleDrive:
     def __init__(self) -> None:
+        """
+        Initialisation of the GoogleDrive class to control access to files in Google Drive.
+        """
         self.conf = self._load_config()
         self.secondary_mime_types = f"({self.conf['GDRIVE_MIME_TYPES']['docs']} or {self.conf['GDRIVE_MIME_TYPES']['sheet']} or {self.conf['GDRIVE_MIME_TYPES']['image']} or {self.conf['GDRIVE_MIME_TYPES']['other']} or {self.conf['GDRIVE_MIME_TYPES']['unknown']})"
         self.drive_service = self._init_drive_service()
@@ -19,6 +22,12 @@ class GoogleDrive:
         logging.info('All internal vars was setted')
 
     def _load_config(self) -> Optional[Dict[str, Union[str, List[str], int]]]:
+        """
+        Loads the configuration from a file.
+
+        Returns:
+            dict or None: Returns the dictionary with the configuration or None in case of an error.
+        """
         try:
             with open(CONFIG_PATH, 'r') as file:
                 return yaml.safe_load(file)
@@ -27,6 +36,12 @@ class GoogleDrive:
             return None
 
     def _init_drive_service(self) -> Any:
+        """
+        Initialises the service to work with Google Drive.
+
+        Returns:
+            service object: Returns a service object for working with Google Drive.
+        """
         try:
             creds = service_account.Credentials.from_service_account_file(self.conf['GDRIVE_API_KEYS'], scopes=self.conf['SCOPES'])
             return build(self.conf['GDRIVE_SERVICE_NAME'], self.conf['GDRIVE_VERSION'], credentials=creds)
@@ -34,10 +49,30 @@ class GoogleDrive:
             logging.error(f'Error on loading drive service: {e}')
     
     def _get_users(self, user_id=None, email=None, name=None, status=None, role=None, is_deleted=None) -> list:
+        """
+        Retrieves users from the database.
+
+        Args:
+            user_id (int, optional): User ID.
+            ... [other params]
+            
+        Returns:
+            list: A list of dictionaries representing users.
+        """
         with Database() as db:
             return db.get_users(user_id, email, name, status, role, is_deleted)
 
     def _get_courses(self, course_id=None, category=None, sub_category=None, course=None) -> dict:
+        """
+        Retrieves courses from the database and files from Google Drive associated with those courses.
+
+        Args:
+            course_id (int, optional): Course ID.
+            ... [other params]
+            
+        Returns:
+            dict: Dictionary of courses and related files.
+        """
         with Database() as db:
             db_courses = db.get_courses(course_id, category, sub_category, course)
         
@@ -50,15 +85,13 @@ class GoogleDrive:
 
     def _get_gdrive_course_files(self, course) -> dict:
         """
-        Функция возвращает словарь с 2-мя ключами: 
-            - presentation_files: список файлов с типом "Презентация"
-            - secondary_files: список файлов со всеми иными типами
+        Retrieves course files from Google Drive.
 
         Args:
-            List[dict]: course
-
+            course (list): A list of dictionaries representing the courses.
+            
         Returns:
-            Dict
+            dict: A dictionary with two keys, "presentation_files" and "secondary_files".
         """
         path_parts = self._get_path_parts(course)
 
@@ -106,7 +139,15 @@ class GoogleDrive:
             'secondary_files': response_secondary.get('files', [])
         }
     
-    def _provide_access(self, user, files, role):
+    def _provide_access(self, user, files, role) -> None:
+        """
+        Provides the user with access to files.
+
+        Args:
+            user (dict): A dictionary representing the user.
+            files (list): Files List.
+            role (str): Access role (e.g. 'reader' or 'writer').
+        """
         try:
             for file in files:
                 permissions = {
@@ -118,18 +159,34 @@ class GoogleDrive:
         except Exception as e:
             logging.error(f'Error providing access: {e}')
 
-    def _revoke_access(self, user, files):
+    def _revoke_access(self, user, files) -> None:
+        """
+        Revokes the user's access to files.
+
+        Args:
+            user (dict): Dict representing the user.
+            files (list): Files List.
+        """
         try:
             for file in files:
                 permissions_list = self.drive_service.permissions().list(fileId=file['id'], fields="permissions(id,type,kind,role,emailAddress)").execute().get('permissions', [])
                 for permission in permissions_list:
                     if permission.get('emailAddress').lower() == user['Email']:
                         self.drive_service.permissions().delete(fileId=file['id'], permissionId=permission['id']).execute()
-                        print(f"Access revoked for {user['Email']} on file {file['name']}")
+                        logging.info(f"Access revoked for {user['Email']} on file {file['name']}")
         except Exception as e:
             logging.error(f'Error revoking access: {e}')
 
-    def _set_gdrive_course_files_permissions(self, user, files, role=None, action='provide'):
+    def _set_gdrive_course_files_permissions(self, user, files, role=None, action='provide') -> None:
+        """
+        Sets or revokes access rights to course files.
+
+        Args:
+            user (dict): Dictionary representing the user.
+            files (list): File List.
+            role (str, optional): Access Role.
+            action (str, optional): Action ('provide' or 'revoke').
+        """
         if action == 'provide':
             self._provide_access(user, files, role)
         elif action == 'revoke':
@@ -138,6 +195,16 @@ class GoogleDrive:
             logging.error(f'Current action "{action}" not determined')
     
     def _revoke_gdrive_course_files_permissions(self, user, files) -> Optional[bool]:
+        """
+        Revokes the user's access rights to course files.
+
+        Args:
+            user (dict): Dictionary representing the user.
+            files (list): File List.
+
+        Returns:
+            bool or None: True, if the rights are successfully revoked, otherwise None.
+        """
         try:
             for file in files:
                 permissions = self.drive_service.permissions().list(fileId=file['id']).execute()
@@ -145,7 +212,7 @@ class GoogleDrive:
                 for permission in permissions:
                     if permission.get('permissions') == user['Email']:
                         self.drive_service.permissions().delete(fileId=file['id'], permissionId=permission['id']).execute()
-                        print(f"Access revoked for {user['Email']} on file {file['name']}")
+                        logging.info(f"Access revoked for {user['Email']} on file {file['name']}")
             
             return True
 
@@ -157,9 +224,6 @@ class GoogleDrive:
         """
         Set copy permissions on all files in GDrive for read role users.
         That func work only with Owner permissions in service account
-
-        Args:
-            -
 
         Returns:
             None
@@ -185,6 +249,15 @@ class GoogleDrive:
             return None
 
     def _get_path_parts(self, course) -> List[str]:
+        """
+        Gets parts of the course path.
+
+        Args:
+            course (dict): Dictionary representing the course.
+
+        Returns:
+            list: A list of parts of the path.
+        """
         path_parts = [course["category"]]
         if course["sub_category"]:
             path_parts.append(course["sub_category"])
@@ -192,6 +265,13 @@ class GoogleDrive:
         return path_parts
 
     def manage_accesses(self, users, action=None) -> None:
+        """
+        Controls file access based on a list of users and a specified action.
+
+        Args:
+            users (list): A list of dictionaries representing users.
+            action (str, optional): Action (e.g. 'provide' or 'revoke').
+        """
         if action not in ['provide', 'revoke']:
             logging.error(f'Invalid action "{action}" passed')
             return
@@ -234,4 +314,4 @@ if __name__ == "__main__":
 
 
 # TODO:
-# Вытащить уроки из под папок. 
+# Make correct gdrive files structure
