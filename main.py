@@ -156,8 +156,9 @@ class GoogleDrive:
                     'emailAddress': user['Email']
                 }
                 self.drive_service.permissions().create(fileId=file['id'], body=permissions, fields='id', sendNotificationEmail=False).execute()
+                logging.info(f'Access provided for user: {user}')
         except Exception as e:
-            logging.error(f'Error providing access: {e}')
+            logging.error(f'Error providing access for user: {user} to file: {file}: {e}')
 
     def _revoke_access(self, user, files) -> None:
         """
@@ -179,12 +180,12 @@ class GoogleDrive:
 
     def _set_gdrive_course_files_permissions(self, user, files, role=None, action='provide') -> None:
         """
-        Sets or revokes access rights to course files.
+        Provides or revokes access rights to course files.
 
         Args:
             user (dict): Dictionary representing the user.
             files (list): File List.
-            role (str, optional): Access Role.
+            role (str): Access role (e.g. 'reader' or 'writer').
             action (str, optional): Action ('provide' or 'revoke').
         """
         if action == 'provide':
@@ -227,26 +228,24 @@ class GoogleDrive:
 
         Returns:
             None
-        """
-        try:
-            for course in self.courses:
-                files = self._get_gdrive_course_files(course)
-                if not files:
-                    logging.info(f'In {course} not found files')
+        """        
+        for course in self.courses.values():
+            if not course:
+                logging.info(f'For {course} can\'t set copy permissions')
+                continue
+            for file in course['presentation_files']:
+                try:
+                    self.drive_service.files().update(
+                        fileId=file['id'],
+                        body=self.conf['GDRIVE_COPY_PERMISSIONS'],
+                        fields='id,copyRequiresWriterPermission'
+                    ).execute()
+                except Exception as e:
+                    logging.error(f'Error revoking copy permissions for file {file}.\n Error: {e}')
                     continue
-                if files:
-                    for file in files:
-                        self.drive_service.files().update(
-                            fileId=file['id'],
-                            body=self.conf['GDRIVE_COPY_PERMISSIONS'],
-                            fields='id,copyRequiresWriterPermission'
-                        ).execute()
 
-            logging.info(f'For all files in gdrive setted copy permissions: {self.conf["GDRIVE_COPY_PERMISSIONS"]}')
-
-        except Exception as e:
-            logging.error(f'Error revoking copy permissions: {e}')
-            return None
+        logging.info(f'For presentation files in gdrive setted copy permissions: {self.conf["GDRIVE_COPY_PERMISSIONS"]}')
+        return None
 
     def _get_path_parts(self, course) -> List[str]:
         """
@@ -286,9 +285,9 @@ class GoogleDrive:
                         continue
                     
                     if course['presentation_files']:
-                        self._set_gdrive_course_files_permissions(user, course['presentation_files'], action=action)
+                        self._set_gdrive_course_files_permissions(user, course['presentation_files'], user['Role'], action=action)
                     if course['secondary_files']:
-                        self._set_gdrive_course_files_permissions(user, course['secondary_files'], role='writer', action=action)
+                        self._set_gdrive_course_files_permissions(user, course['secondary_files'], 'writer', action=action)
                 
                 # Update user status
                 if action == 'provide':
@@ -300,7 +299,7 @@ class GoogleDrive:
 
 if __name__ == "__main__":
     gd = GoogleDrive()
-    gd.set_file_copy_permissions()
+    # gd.set_file_copy_permissions()
 
     # Handle new users
     if gd.new_users:
@@ -311,7 +310,3 @@ if __name__ == "__main__":
     if gd.fired_users:
         logging.info("Revoking access from fired users...")
         gd.manage_accesses(gd.fired_users, action='revoke')
-
-
-# TODO:
-# Make correct gdrive files structure
